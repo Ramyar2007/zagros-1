@@ -29,7 +29,9 @@ module zg_npu #(
     // slave register port
     input  wire        s_req,
     input  wire        s_we,
-    input  wire [5:0]  s_addr,      // byte offset [5:0]
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  wire [5:0]  s_addr,      // byte offset; [1:0] ignored (word registers)
+    /* verilator lint_on UNUSEDSIGNAL */
     input  wire [31:0] s_wdata,
     output wire        s_gnt,
     output reg  [31:0] s_rdata,
@@ -139,7 +141,8 @@ module zg_npu #(
 
     // ------------------------------------------------------------------ requantizer (one element per cycle, 2-stage)
     reg  [2:0] ri, rj;                                   // element being requantized
-    wire signed [AW-1:0] acc_sel  = acc_flat[(ri*N + rj)*AW +: AW];
+    wire [31:0]          e_idx    = {26'd0, ri, rj};          // element index i*8+j
+    wire signed [AW-1:0] acc_sel  = acc_flat[e_idx*AW +: AW];
     wire signed [AW-1:0] bias_sel = r_bias ? bias[rj] : {AW{1'b0}};
     wire signed [AW-1:0] v_sum    = acc_sel + bias_sel;
     reg  signed [63:0]   q_prod;                         // stage 1 register
@@ -158,9 +161,8 @@ module zg_npu #(
     reg        half;                // which 32-bit half of an 8-byte row
     reg        wait_r;              // read issued, waiting for rvalid
     reg [3:0]  bi;                  // bias index
-    reg [31:0] wbuf;                // packed output bytes (int8 mode)
+    reg [23:0] wbuf;                // bytes 0-2 of the output word (byte 3 goes straight from q_out)
 
-    integer x;
 
     always @(posedge clk) begin
         if (!rst_n) begin
@@ -169,7 +171,7 @@ module zg_npu #(
             arr_clr <= 1'b0; arr_valid <= 1'b0; arr_a <= 0; arr_b <= 0;
             row <= 0; kk <= 0; half <= 1'b0; wait_r <= 1'b0; bi <= 0; wbuf <= 0;
             ri <= 0; rj <= 0; q_prod <= 0;
-            for (x = 0; x < N; x = x + 1) bias[x] <= 0;
+            bias[0] <= 0; bias[1] <= 0; bias[2] <= 0; bias[3] <= 0; bias[4] <= 0; bias[5] <= 0; bias[6] <= 0; bias[7] <= 0;
         end else begin
             arr_clr   <= 1'b0;
             arr_valid <= 1'b0;
@@ -196,7 +198,7 @@ module zg_npu #(
             // ---- bias: N words
             S_BIAS: begin
                 if (!wait_r && !m_req) begin
-                    m_req <= 1'b1; m_we <= 1'b0; m_be <= 4'hF; m_addr <= r_bias_addr + {bi, 2'b00}; wait_r <= 1'b1;
+                    m_req <= 1'b1; m_we <= 1'b0; m_be <= 4'hF; m_addr <= r_bias_addr + {26'd0, bi, 2'b00}; wait_r <= 1'b1;
                 end else if (wait_r && m_rvalid) begin
                     bias[bi[2:0]] <= m_rdata; wait_r <= 1'b0;
                     if (bi == N - 1) begin bi <= 0; state <= S_LDA; end
@@ -208,12 +210,14 @@ module zg_npu #(
             S_LDA: begin
                 if (!wait_r && !m_req) begin
                     m_req <= 1'b1; m_we <= 1'b0; m_be <= 4'hF;
-                    m_addr <= r_a_addr + row * r_a_stride + {kk, 2'b00}; wait_r <= 1'b1;
+                    m_addr <= r_a_addr + row * r_a_stride + {24'd0, kk, 2'b00}; wait_r <= 1'b1;
                 end else if (wait_r && m_rvalid) begin
                     wait_r <= 1'b0;
-                    for (x = 0; x < 4; x = x + 1)
-                        abuf[{kk, 2'b00} + x][row*8 +: 8] <= m_rdata[x*8 +: 8];
-                    if ({kk, 2'b00} + 3'd4 >= r_k) begin
+                    abuf[{kk[2:0], 2'd0}][row*8 +: 8] <= m_rdata[ 7: 0];
+                    abuf[{kk[2:0], 2'd1}][row*8 +: 8] <= m_rdata[15: 8];
+                    abuf[{kk[2:0], 2'd2}][row*8 +: 8] <= m_rdata[23:16];
+                    abuf[{kk[2:0], 2'd3}][row*8 +: 8] <= m_rdata[31:24];
+                    if ({kk, 2'b00} + 8'd4 >= {2'b00, r_k}) begin
                         kk <= 0;
                         if (row == N - 1) begin row <= 0; state <= S_LDB; end
                         else row <= row + 1'b1;
@@ -225,10 +229,10 @@ module zg_npu #(
             S_LDB: begin
                 if (!wait_r && !m_req) begin
                     m_req <= 1'b1; m_we <= 1'b0; m_be <= 4'hF;
-                    m_addr <= r_b_addr + kk * r_b_stride + {half, 2'b00}; wait_r <= 1'b1;
+                    m_addr <= r_b_addr + kk * r_b_stride + {29'd0, half, 2'b00}; wait_r <= 1'b1;
                 end else if (wait_r && m_rvalid) begin
                     wait_r <= 1'b0;
-                    bbuf[kk][half*32 +: 32] <= m_rdata;
+                    bbuf[kk[4:0]][half*32 +: 32] <= m_rdata;
                     half <= ~half;
                     if (half) begin
                         if (kk + 1'b1 == r_k) begin kk <= 0; state <= S_CLR; end
@@ -246,8 +250,8 @@ module zg_npu #(
             // ---- stream K steps into the array, one per cycle
             S_RUN: begin
                 arr_valid <= 1'b1;
-                arr_a <= abuf[kk];
-                arr_b <= bbuf[kk];
+                arr_a <= abuf[kk[4:0]];
+                arr_b <= bbuf[kk[4:0]];
                 if (kk + 1'b1 == r_k) begin kk <= 0; state <= S_DRAIN; end
                 else kk <= kk + 1'b1;
             end
@@ -268,14 +272,14 @@ module zg_npu #(
             S_REQ: begin                         // Q2
                 if (r_raw) begin
                     m_wdata <= v_sum;
-                    m_addr  <= r_c_addr + ri * r_c_stride + {rj, 2'b00};
+                    m_addr  <= r_c_addr + ri * r_c_stride + {27'd0, rj, 2'b00};
                     m_be <= 4'hF; m_we <= 1'b1; m_req <= 1'b1;
                     state <= S_WR;
                 end else begin
-                    wbuf[rj[1:0]*8 +: 8] <= q_out;
+                    if (rj[1:0] != 2'd3) wbuf[rj[1:0]*8 +: 8] <= q_out;
                     if (rj[1:0] == 2'd3) begin
                         m_wdata <= {q_out, wbuf[23:0]};
-                        m_addr  <= r_c_addr + ri * r_c_stride + {rj[2], 2'b00};
+                        m_addr  <= r_c_addr + ri * r_c_stride + {29'd0, rj[2], 2'b00};
                         m_be <= 4'hF; m_we <= 1'b1; m_req <= 1'b1;
                         state <= S_WR;
                     end else begin
@@ -287,7 +291,7 @@ module zg_npu #(
 
             S_WR: if (m_req && m_gnt) begin
                 m_we <= 1'b0;
-                if (ri == N - 1 && rj == N - 1) state <= S_DONE;
+                if (ri == 3'd7 && rj == 3'd7) state <= S_DONE;
                 else begin
                     {ri, rj} <= {ri, rj} + 1'b1;
                     state <= S_STORE;

@@ -34,6 +34,7 @@ jobs:
       - name: lint (verilator -Wall)
         run: python flow/lint.py
       - name: simulate
+        if: always()
         run: python tb/run.py ${{ github.event.inputs.suites }}
       - name: quick synth (cell / flip-flop counts)
         if: always()
