@@ -1,7 +1,8 @@
 // ZAGROS-1  ZG-CORE fetch unit: word fetches over ZG-BUS into a halfword FIFO, aligner + RVC expansion.
 // ZG-BUS read data returns exactly one cycle after the grant, so with one request per cycle at most one fetch is in
-// flight. The request is suppressed in a redirect cycle, so nothing granted ever belongs to an old stream except the
-// response arriving in the redirect cycle itself, which the flush ignores.
+// flight. i_req depends only on registers (never on the redirect, which depends on the data-bus grant: that would be
+// a combinational loop through a shared arbiter). A fetch granted in a redirect cycle belongs to the old stream:
+// its response (next cycle) is dropped.
 `default_nettype none
 
 module zg_fetch #(
@@ -34,10 +35,11 @@ module zg_fetch #(
     reg [31:0] fa;              // next word address to fetch
     reg        skip_half;       // drop the low halfword of the next word (stream starts at pc[1]=1)
     reg        pend;            // a granted fetch returns this cycle (mirrors i_rvalid for this master)
+    reg        drop;            // the response returning this cycle belongs to an old stream
 
     // room: the word returning now (pend) + the one we request now, 2 halfwords each, minus nothing popped yet
     wire room = (count + (pend ? 4'd2 : 4'd0) + 4'd2) <= 4'd8;
-    assign i_req  = rst_n && !redirect && room;
+    assign i_req  = rst_n && room;
     assign i_addr = fa;
 
     // aligner
@@ -58,22 +60,25 @@ module zg_fetch #(
 
     wire       take = o_valid && o_ready;
     wire [3:0] pop  = take ? (is32 ? 4'd2 : 4'd1) : 4'd0;
-    wire [3:0] push = i_rvalid ? (skip_half ? 4'd1 : 4'd2) : 4'd0;
+    wire       rv   = i_rvalid && !drop;
+    wire [3:0] push = rv ? (skip_half ? 4'd1 : 4'd2) : 4'd0;
 
     always @(posedge clk) begin
         if (!rst_n) begin
             rd_p <= 3'd0; wr_p <= 3'd0; count <= 4'd0; head_pc <= BOOT;
-            fa <= {BOOT[31:2], 2'b00}; skip_half <= BOOT[1]; pend <= 1'b0;
+            fa <= {BOOT[31:2], 2'b00}; skip_half <= BOOT[1]; pend <= 1'b0; drop <= 1'b0;
         end else if (redirect) begin
             rd_p <= 3'd0; wr_p <= 3'd0; count <= 4'd0;
             head_pc   <= redirect_pc;
             fa        <= {redirect_pc[31:2], 2'b00};
             skip_half <= redirect_pc[1];
-            pend      <= 1'b0;                          // no request was issued this cycle
+            pend      <= i_req && i_gnt;
+            drop      <= i_req && i_gnt;                // granted now = old stream: drop its data next cycle
         end else begin
             pend <= i_req && i_gnt;
+            drop <= 1'b0;
             if (i_req && i_gnt) fa <= fa + 32'd4;
-            if (i_rvalid) begin
+            if (rv) begin
                 if (skip_half) begin
                     fifo[wr_p] <= i_rdata[31:16];
                     skip_half  <= 1'b0;

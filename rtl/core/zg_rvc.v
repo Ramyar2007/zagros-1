@@ -20,10 +20,12 @@ module zg_rvc (
     wire [19:0] imm_lui      = {{15{c[12]}}, c[6:2]};
     wire [11:0] imm_lwsp     = {4'b0, c[3:2], c[12], c[6:4], 2'b00};
     wire [11:0] imm_swsp     = {4'b0, c[8:7], c[12:9], 2'b00};
+    /* verilator lint_off UNUSEDSIGNAL */   // bit 0 of jump/branch offsets is always 0
     // jal offset bits [11:1]
     wire [20:0] imm_j  = {{10{c[12]}}, c[8], c[10:9], c[6], c[7], c[2], c[11], c[5:3], 1'b0};
     // branch offset bits [8:1]
     wire [12:0] imm_b  = {{5{c[12]}}, c[6:5], c[2], c[11:10], c[4:3], 1'b0};
+    /* verilator lint_on UNUSEDSIGNAL */
 
     localparam OP_IMM = 7'b0010011, OP = 7'b0110011, LOAD = 7'b0000011, STORE = 7'b0100011,
                LUI = 7'b0110111, JAL = 7'b1101111, JALR = 7'b1100111, BRANCH = 7'b1100011, SYSTEM = 7'b1110011;

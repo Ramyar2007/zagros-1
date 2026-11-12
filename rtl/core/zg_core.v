@@ -25,7 +25,9 @@ module zg_core #(
     output wire [31:0] d_wdata,
     output wire [3:0]  d_be,
     input  wire        d_gnt,
-    input  wire        d_rvalid,
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  wire        d_rvalid,      // fixed one-cycle latency is assumed (ZG-BUS); kept for protocol checkers
+    /* verilator lint_on UNUSEDSIGNAL */
     input  wire [31:0] d_rdata,
     // interrupts (level, already synchronised)
     input  wire        irq_timer,
@@ -186,7 +188,9 @@ module zg_core #(
     wire        mb_s  = (e_f3 == 3'b001);
     wire signed [32:0] ma = {ma_s & op1[31], op1};
     wire signed [32:0] mb = {mb_s & op2[31], op2};
-    wire signed [65:0] mp = ma * mb;
+    /* verilator lint_off UNUSEDSIGNAL */
+    wire signed [65:0] mp = ma * mb;      // bits 65:64 are sign copies
+    /* verilator lint_on UNUSEDSIGNAL */
     wire [31:0] mul_r = (e_f3 == 3'b000) ? mp[31:0] : mp[63:32];
 
     // divider
