@@ -36,6 +36,7 @@ jobs:
         run: pip install -q librelane==3.0.17 klayout
       - name: LibreLane (dockerized) RTL -> GDS
         run: |
+          mkdir -p runs/${{ matrix.block }}
           python -m librelane --docker-no-tty --dockerized --pdk-root "$PDK_ROOT" --pdk $PDK \
             --run-tag ci --force-run-dir runs/${{ matrix.block }} flow/harden/${{ matrix.block }}/config.json
       - name: collect results
