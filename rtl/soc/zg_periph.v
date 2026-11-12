@@ -13,7 +13,9 @@ module zg_periph (
     input  wire        rst_n,
     input  wire        req,
     input  wire        we,
-    input  wire [15:0] addr,
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  wire [15:0] addr,              // [15:12] block, [5:2] register
+    /* verilator lint_on UNUSEDSIGNAL */
     input  wire [31:0] wdata,
     input  wire [3:0]  be,
     output reg  [31:0] rdata,
@@ -54,7 +56,9 @@ module zg_periph (
     reg [15:0] u_div;
     reg        u_rxie;
     // tx
-    reg [9:0]  tx_sh;
+    /* verilator lint_off UNUSEDSIGNAL */
+    reg [9:0]  tx_sh;                     // bit 0 is the bit on the line (driven from uart_tx)
+    /* verilator lint_on UNUSEDSIGNAL */
     reg [3:0]  tx_bits;
     reg [15:0] tx_cnt;
     wire       tx_busy = tx_bits != 0;
@@ -118,7 +122,10 @@ module zg_periph (
 
     // ---------------- SPI master (mode 0, MSB first)
     reg [15:0] s_div, s_cnt;
-    reg [7:0]  s_sh, s_rx;
+    /* verilator lint_off UNUSEDSIGNAL */
+    reg [7:0]  s_sh;                      // bit 7 is already on spi_mosi
+    /* verilator lint_on UNUSEDSIGNAL */
+    reg [7:0]  s_rx;
     reg [3:0]  s_bits;
     reg        s_busy;
     always @(posedge clk) begin

@@ -48,6 +48,10 @@ async def test_digits_demo(dut):
     text = ''.join(out)
     post = int(dut.post.value)
     dut._log.info('UART:\n' + text)
+    if not post >> 31:
+        core = dut.u_soc.u_core
+        dut._log.error(f"core state: ifetch addr={int(core.i_addr.value):#x} d_req={int(core.d_req.value)} "
+                       f"mcause={int(core.mcause.value):#x} mepc={int(core.mepc.value):#x}")
     assert post >> 31, f'firmware did not finish in {MAX_CYCLES} cycles; UART so far:\n{text}'
     total, correct, bad = post & 0xFF, (post >> 8) & 0xFF, (post >> 16) & 0xFF
     mj = ROOT / 'fw' / 'build' / 'model.json'

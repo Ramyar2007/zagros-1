@@ -27,7 +27,9 @@ def run_suite(name):
     out.mkdir(parents=True)
     if name == 'soc':                                    # firmware images into the simulator's working directory
         for h in ('isram.hex', 'dsram.hex'):
-            shutil.copy(ROOT / 'fw' / 'build' / h, ROOT / tdir / h)
+            for d in (ROOT / tdir, out / 'build', ROOT):
+                d.mkdir(parents=True, exist_ok=True)
+                shutil.copy(ROOT / 'fw' / 'build' / h, d / h)
     runner = get_runner('verilator')
     t0 = time.time()
     runner.build(sources=[RTL / s for s in srcs], hdl_toplevel=top, parameters=params, waves=True,

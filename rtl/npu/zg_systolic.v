@@ -105,7 +105,8 @@ module zg_systolic #(
     // ---------------- busy tracking ----------------
     // last input at cycle K-1 reaches PE(N-1,N-1) at K-1+2(N-1); results are final from cycle K+2N-2.
     localparam CW = $clog2(2*N + 1);
-    localparam [CW-1:0] DRAIN0 = 2*N - 1;
+    localparam integer DRAIN_I = 2*N - 1;
+    localparam [CW-1:0] DRAIN0 = DRAIN_I[CW-1:0];
     reg [CW-1:0] drain;
     always @(posedge clk) begin
         if (!rst_n)              drain <= {CW{1'b0}};

@@ -36,7 +36,10 @@ module zg_soc #(
 
     // ---------------- masters
     wire        ci_req, cd_req, cd_we, np_req, np_we;
-    wire [31:0] ci_addr, cd_addr, cd_wdata, np_addr, np_wdata;
+    /* verilator lint_off UNUSEDSIGNAL */      // address bits between the region nibble and the memory size are don't-care
+    wire [31:0] ci_addr, cd_addr, np_addr;
+    /* verilator lint_on UNUSEDSIGNAL */
+    wire [31:0] cd_wdata, np_wdata;
     wire [3:0]  cd_be, np_be;
     wire        ci_gnt, cd_gnt, np_gnt;
     reg         ci_rv, cd_rv, np_rv;
