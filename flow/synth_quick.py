@@ -15,6 +15,9 @@ BLOCKS = {
     'zg_pe': ('zg_pe', ['rtl/npu/zg_pe.v'], {'AW': AW}, (8 + 8 + 1 + AW, 8 + 8 + 1 + AW)),
     'zg_systolic': ('zg_systolic', ['rtl/npu/zg_pe.v', 'rtl/npu/zg_systolic.v'], {'N': N, 'AW': AW},
                     (SYS_ESS + 5, SYS_ESS + N * N + 2 * N + 5)),
+    # npu: array + A/B scratchpads (2 x KMAX x 64 bits) + bias (8 x 32) at least; registers/FSM/requant add < 1000
+    'zg_npu': ('zg_npu', ['rtl/npu/zg_pe.v', 'rtl/npu/zg_systolic.v', 'rtl/npu/zg_npu.v'], {},
+               (SYS_ESS + 2 * 32 * 64 + 8 * 32, SYS_ESS + N * N + 2 * N + 5 + 2 * 32 * 64 + 8 * 32 + 1000)),
 }
 
 out = {'kind': 'synth_quick', 'blocks': []}

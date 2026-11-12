@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TOPS = {
     'zg_pe': ['rtl/npu/zg_pe.v'],
     'zg_systolic': ['rtl/npu/zg_pe.v', 'rtl/npu/zg_systolic.v'],
+    'zg_npu': ['rtl/npu/zg_pe.v', 'rtl/npu/zg_systolic.v', 'rtl/npu/zg_npu.v'],
 }
 
 out = {'kind': 'lint', 'modules': []}
