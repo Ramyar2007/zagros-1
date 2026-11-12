@@ -1,0 +1,46 @@
+{
+ "DESIGN_NAME": "zg_core",
+ "CLOCK_PERIOD": 40,
+ "FP_CORE_UTIL": 45,
+ "PL_TARGET_DENSITY_PCT": 55,
+ "VERILOG_FILES": [
+  "dir::../../../rtl/core/zg_rvc.v",
+  "dir::../../../rtl/core/zg_fetch.v",
+  "dir::../../../rtl/core/zg_div.v",
+  "dir::../../../rtl/core/zg_core.v"
+ ],
+ "CLOCK_PORT": "clk",
+ "VDD_PIN_VOLTAGE": 3.3,
+ "LIB_SYNTH": "pdk_dir::libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__tt_025C_3v30.lib",
+ "LIB_FASTEST": "pdk_dir::libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__ff_n40C_3v60.lib",
+ "LIB_SLOWEST": "pdk_dir::libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__ss_125C_3v00.lib",
+ "DEFAULT_CORNER": "nom_tt_025C_3v30",
+ "STA_CORNERS": [
+  "nom_tt_025C_3v30",
+  "nom_ss_125C_3v00",
+  "nom_ff_n40C_3v60",
+  "min_tt_025C_3v30",
+  "min_ss_125C_3v00",
+  "min_ff_n40C_3v60",
+  "max_tt_025C_3v30",
+  "max_ss_125C_3v00",
+  "max_ff_n40C_3v60"
+ ],
+ "LIB": {
+  "*_tt_025C_3v30": [
+   "pdk_dir::libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__tt_025C_3v30.lib"
+  ],
+  "*_ss_125C_3v00": [
+   "pdk_dir::libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__ss_125C_3v00.lib"
+  ],
+  "*_ff_n40C_3v60": [
+   "pdk_dir::libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__ff_n40C_3v60.lib"
+  ]
+ },
+ "PL_RESIZER_HOLD_SLACK_MARGIN": 0.25,
+ "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.15,
+ "DIODE_ON_PORTS": "in",
+ "RUN_HEURISTIC_DIODE_INSERTION": true,
+ "MAX_FANOUT_CONSTRAINT": 12,
+ "FP_PDN_MULTILAYER": true
+}

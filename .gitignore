@@ -8,3 +8,4 @@ tb/core/build/
 fw/build/
 fw/model.h
 tb/soc/*.hex
+runs/

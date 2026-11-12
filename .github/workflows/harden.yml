@@ -1,0 +1,60 @@
+name: harden
+# RTL -> GDS on GF180MCU with LibreLane (same recipe as Tiny Tapeout's CI), one job per block.
+# Outputs: GDS, layout PNG, sign-off summary (area, timing on 9 corners, DRC/LVS/antenna) as artifacts.
+on:
+  workflow_dispatch:
+    inputs:
+      blocks:
+        description: 'JSON list of blocks'
+        required: false
+        default: '["zg_core", "zg_npu"]'
+      run_id:
+        description: 'WAFER app run id'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths: ['flow/harden/**', '.github/workflows/harden.yml']
+
+jobs:
+  harden:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        block: ${{ fromJSON(github.event.inputs.blocks || '["zg_core", "zg_npu"]') }}
+    env:
+      PDK_ROOT: /home/runner/pdk
+      PDK: gf180mcuD
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: install LibreLane + KLayout python
+        run: pip install -q librelane==3.0.17 klayout
+      - name: LibreLane (dockerized) RTL -> GDS
+        run: |
+          python -m librelane --docker-no-tty --dockerized --pdk-root "$PDK_ROOT" --pdk $PDK \
+            --run-tag ci --force-run-dir runs/${{ matrix.block }} flow/harden/${{ matrix.block }}/config.json
+      - name: collect results
+        if: always()
+        run: |
+          B=${{ matrix.block }}
+          mkdir -p results/harden/$B
+          python flow/harden/summarize.py runs/$B results/harden/$B/signoff.json || true
+          cp runs/$B/final/gds/*.gds results/harden/$B/ 2>/dev/null || true
+          cp -r runs/$B/final/metrics.* results/harden/$B/ 2>/dev/null || true
+          find runs/$B -name "*.rpt" -path "*sta*" -size -2M | head -40 | xargs -I{} cp {} results/harden/$B/ 2>/dev/null || true
+          ls runs/$B | tail -60 > results/harden/$B/steps.txt || true
+          G=$(ls results/harden/$B/*.gds 2>/dev/null | head -1)
+          if [ -n "$G" ]; then python flow/harden/render.py "$G" results/harden/$B/layout.png 2048 || true; fi
+          echo '{"run_id": "${{ github.event.inputs.run_id }}", "block": "'$B'"}' > results/harden/$B/run.json
+          du -sh results/harden/$B
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: harden-${{ matrix.block }}
+          path: results/harden/${{ matrix.block }}
+          retention-days: 30
