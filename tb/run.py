@@ -27,8 +27,9 @@ def run_suite(name):
     xml = out / 'results.xml'
     runner.test(hdl_toplevel=top, test_module=mod, test_dir=ROOT / tdir, waves=True, build_dir=out / 'build',
                 results_xml=str(xml), extra_env={'PYTHONPATH': str(ROOT / tdir)})
-    for f in glob.glob(str(out / 'build' / '*.fst')):
-        shutil.copy(f, out / 'dump.fst')
+    for f in glob.glob(str(out / 'build' / '*.fst')) + glob.glob(str(ROOT / tdir / '*.fst')) + glob.glob(str(ROOT / '*.fst')):
+        shutil.move(f, out / 'dump.fst')
+    shutil.rmtree(out / 'build', ignore_errors=True)   # keep artifacts small: results + waves only
     tests = []
     for tc in ET.parse(xml).getroot().iter('testcase'):
         fail = tc.find('failure') is not None or tc.find('error') is not None
@@ -38,9 +39,10 @@ def run_suite(name):
             if e is not None:
                 msg = (e.get('message') or e.text or '')[:500]
         tests.append({'name': tc.get('name'), 'passed': not fail, 'time_s': float(tc.get('time') or 0),
-                      'sim_ns': float(tc.get('sim_time_ns') or 0), 'message': msg})
+                      'sim_ns': float(tc.get('sim_time_ns') or tc.get('sim_time') or 0), 'message': msg})
     return {'suite': name, 'toplevel': top, 'passed': all(t['passed'] for t in tests) and len(tests) > 0,
-            'tests': tests, 'wall_s': round(time.time() - t0, 1), 'waves': f'results/{name}/dump.fst'}
+            'tests': tests, 'wall_s': round(time.time() - t0, 1),
+            'waves': f'results/{name}/dump.fst' if (out / 'dump.fst').exists() else None}
 
 
 if __name__ == '__main__':
