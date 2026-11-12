@@ -21,10 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: YosysHQ/setup-oss-cad-suite@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: python deps
+        id: deps
         run: pip install -q "cocotb>=2.0" numpy
       - name: tool versions
         run: |
@@ -34,10 +37,10 @@ jobs:
       - name: lint (verilator -Wall)
         run: python flow/lint.py
       - name: simulate
-        if: always()
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: python tb/run.py ${{ github.event.inputs.suites }}
       - name: quick synth (cell / flip-flop counts)
-        if: always()
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: python flow/synth_quick.py
       - name: tag summary
         if: always()
