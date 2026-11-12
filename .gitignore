@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 sim_build/
 .data/
+tb/core/riscv-tests/
+tb/core/build/

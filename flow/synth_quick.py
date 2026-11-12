@@ -18,6 +18,9 @@ BLOCKS = {
     # npu: array + A/B scratchpads (2 x KMAX x 64 bits) + bias (8 x 32) at least; registers/FSM/requant add < 1000
     'zg_npu': ('zg_npu', ['rtl/npu/zg_pe.v', 'rtl/npu/zg_systolic.v', 'rtl/npu/zg_npu.v'], {},
                (SYS_ESS + 2 * 32 * 64 + 8 * 32, SYS_ESS + N * N + 2 * N + 5 + 2 * 32 * 64 + 8 * 32 + 1000)),
+    # core: register file 31x32 + pipeline registers + CSRs (64-bit counters) + fetch FIFO 8x16 + divider
+    'zg_core': ('zg_core', ['rtl/core/zg_rvc.v', 'rtl/core/zg_fetch.v', 'rtl/core/zg_div.v', 'rtl/core/zg_core.v'], {},
+                (31 * 32 + 8 * 16 + 128, 31 * 32 + 8 * 16 + 128 + 1600)),
 }
 
 out = {'kind': 'synth_quick', 'blocks': []}

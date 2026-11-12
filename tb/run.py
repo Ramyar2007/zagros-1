@@ -13,6 +13,7 @@ SUITES = {
     'pe':       ('zg_pe',       'tb/npu', 'test_pe',       ['npu/zg_pe.v'], {}),
     'systolic': ('zg_systolic', 'tb/npu', 'test_systolic', ['npu/zg_pe.v', 'npu/zg_systolic.v'], {'N': 8, 'AW': 32}),
     'npu':      ('zg_npu',      'tb/npu', 'test_npu',      ['npu/zg_pe.v', 'npu/zg_systolic.v', 'npu/zg_npu.v'], {}),
+    'core':     ('zg_core',     'tb/core', 'test_core',    ['core/zg_rvc.v', 'core/zg_fetch.v', 'core/zg_div.v', 'core/zg_core.v'], {}),
 }
 
 

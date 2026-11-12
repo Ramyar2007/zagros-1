@@ -7,6 +7,7 @@ TOPS = {
     'zg_pe': ['rtl/npu/zg_pe.v'],
     'zg_systolic': ['rtl/npu/zg_pe.v', 'rtl/npu/zg_systolic.v'],
     'zg_npu': ['rtl/npu/zg_pe.v', 'rtl/npu/zg_systolic.v', 'rtl/npu/zg_npu.v'],
+    'zg_core': ['rtl/core/zg_rvc.v', 'rtl/core/zg_fetch.v', 'rtl/core/zg_div.v', 'rtl/core/zg_core.v'],
 }
 
 out = {'kind': 'lint', 'modules': []}
