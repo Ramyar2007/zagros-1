@@ -5,3 +5,6 @@ sim_build/
 .data/
 tb/core/riscv-tests/
 tb/core/build/
+fw/build/
+fw/model.h
+tb/soc/*.hex

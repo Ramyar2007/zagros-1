@@ -14,6 +14,9 @@ SUITES = {
     'systolic': ('zg_systolic', 'tb/npu', 'test_systolic', ['npu/zg_pe.v', 'npu/zg_systolic.v'], {'N': 8, 'AW': 32}),
     'npu':      ('zg_npu',      'tb/npu', 'test_npu',      ['npu/zg_pe.v', 'npu/zg_systolic.v', 'npu/zg_npu.v'], {}),
     'core':     ('zg_core',     'tb/core', 'test_core',    ['core/zg_rvc.v', 'core/zg_fetch.v', 'core/zg_div.v', 'core/zg_core.v'], {}),
+    'soc':      ('tb_soc',      'tb/soc',  'test_soc',     ['core/zg_rvc.v', 'core/zg_fetch.v', 'core/zg_div.v', 'core/zg_core.v',
+                                                            'npu/zg_pe.v', 'npu/zg_systolic.v', 'npu/zg_npu.v',
+                                                            'soc/zg_sram.v', 'soc/zg_periph.v', 'soc/zg_soc.v', '../tb/soc/tb_soc.v'], {}),
 }
 
 
@@ -22,6 +25,9 @@ def run_suite(name):
     out = ROOT / 'results' / name
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
+    if name == 'soc':                                    # firmware images into the simulator's working directory
+        for h in ('isram.hex', 'dsram.hex'):
+            shutil.copy(ROOT / 'fw' / 'build' / h, ROOT / tdir / h)
     runner = get_runner('verilator')
     t0 = time.time()
     runner.build(sources=[RTL / s for s in srcs], hdl_toplevel=top, parameters=params, waves=True,
