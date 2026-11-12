@@ -27,10 +27,13 @@ module zg_systolic #(
     wire [N*8-1:0] b_sk;
 
     // horizontal links: PE(i,j) left input = ah[(i*(N+1)+j)], right output = ah[(i*(N+1)+j+1)]
+    // (the last column's a/v outputs and the last row's b outputs leave the array unused: expected)
+    /* verilator lint_off UNUSEDSIGNAL */
     wire [N*(N+1)*8-1:0] ah;
     wire [N*(N+1)-1:0]   vh;
     // vertical links: PE(i,j) top input = bv[(i*N+j)], bottom output = bv[((i+1)*N+j)]
     wire [(N+1)*N*8-1:0] bv;
+    /* verilator lint_on UNUSEDSIGNAL */
 
     genvar i, j;
     generate
@@ -46,15 +49,27 @@ module zg_systolic #(
                 reg [i*8-1:0] a_sr;
                 reg [i*8-1:0] b_sr;
                 reg [i-1:0]   v_sr;
+                // shift register, newest sample in the low byte; widths exact (lint-clean)
+                wire [i*8-1:0] a_nx, b_nx;
+                wire [i-1:0]   v_nx;
+                if (i == 1) begin : g_one
+                    assign a_nx = a_in_i;
+                    assign b_nx = b_in_i;
+                    assign v_nx = in_valid;
+                end else begin : g_many
+                    assign a_nx = {a_sr[(i-1)*8-1:0], a_in_i};
+                    assign b_nx = {b_sr[(i-1)*8-1:0], b_in_i};
+                    assign v_nx = {v_sr[i-2:0], in_valid};
+                end
                 always @(posedge clk) begin
                     if (!rst_n) begin
                         a_sr <= {(i*8){1'b0}};
                         b_sr <= {(i*8){1'b0}};
                         v_sr <= {i{1'b0}};
                     end else if (en) begin
-                        a_sr <= (a_sr << 8) | a_in_i;   // zero-extended by width rules
-                        b_sr <= (b_sr << 8) | b_in_i;
-                        v_sr <= (v_sr << 1) | in_valid;
+                        a_sr <= a_nx;
+                        b_sr <= b_nx;
+                        v_sr <= v_nx;
                     end
                 end
                 assign a_sk[i*8 +: 8] = a_sr[(i-1)*8 +: 8];
