@@ -2,6 +2,7 @@
 (random grant delays). Pass = program writes 1 to tohost (0x8000). Also an IRQ register at 0xF000 (bit0 timer,
 bit1 external) for the interrupt tests. Writes tb results to results/core/programs.json."""
 import json, os, random
+from collections import deque
 from pathlib import Path
 import cocotb
 from cocotb.clock import Clock
@@ -19,6 +20,8 @@ class System:
         self.mem[:len(img)] = img
         self.tohost = None
         self.retired = 0
+        self.trace = deque(maxlen=300)
+        self.cyc = 0
 
     def rd(self, a):
         a &= MEMSZ - 1
@@ -29,6 +32,7 @@ class System:
         pi = pd = None
         for _ in range(MAX_CYCLES):
             await FallingEdge(dut.clk)
+            self.cyc += 1
             # responses (one cycle after grant)
             dut.i_rvalid.value = 0
             dut.d_rvalid.value = 0
@@ -47,6 +51,7 @@ class System:
                 a = int(dut.d_addr.value)
                 if int(dut.d_we.value):
                     w, be = int(dut.d_wdata.value), int(dut.d_be.value)
+                    self.trace.append(f'{self.cyc:6d} ST  [{a:#07x}] be={be:04b} data={w:#010x}')
                     if a == TOHOST:
                         self.tohost = w
                     elif a == IRQREG:
@@ -58,8 +63,11 @@ class System:
                                 self.mem[(a + b) & (MEMSZ - 1)] = (w >> (8 * b)) & 0xFF
                 else:
                     pd = a
+                    self.trace.append(f'{self.cyc:6d} LD  [{a:#07x}] -> {self.rd(a):#010x}')
             if int(dut.rvfi_valid.value):
                 self.retired += 1
+                pc = int(dut.rvfi_pc.value)
+                self.trace.append(f'{self.cyc:6d} RET pc={pc:#07x} ins={self.rd(pc & ~3):#010x}')
             if self.tohost is not None:
                 return
         self.tohost = None
@@ -98,6 +106,10 @@ async def test_programs(dut):
         results.append({'name': t['name'], 'passed': ok, 'result': why, 'retired': sysm.retired})
         if not ok:
             fails.append(f"{t['name']}: {why}")
+            tr = HERE.parents[1] / 'results' / 'core' / f"{t['name']}.trace"
+            tr.parent.mkdir(parents=True, exist_ok=True)
+            tr.write_text('
+'.join(sysm.trace))
         dut._log.info(f"{'PASS' if ok else 'FAIL'} {t['name']} ({why}, {sysm.retired} instr)")
     out = HERE.parents[1] / 'results' / 'core'
     out.mkdir(parents=True, exist_ok=True)
