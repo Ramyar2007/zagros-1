@@ -1,0 +1,59 @@
+name: sim
+# Lint + cocotb/Verilator simulation + quick generic synthesis. Triggered on push or by the WAFER app (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      suites:
+        description: 'space-separated suite names (empty = all)'
+        required: false
+        default: ''
+      run_id:
+        description: 'WAFER app run id (echoed into the summary)'
+        required: false
+        default: ''
+
+jobs:
+  sim:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: YosysHQ/setup-oss-cad-suite@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: python deps
+        run: pip install -q "cocotb>=2.0" numpy
+      - name: tool versions
+        run: |
+          verilator --version
+          yosys -V
+          python -c "import cocotb; print('cocotb', cocotb.__version__)"
+      - name: lint (verilator -Wall)
+        run: python flow/lint.py
+      - name: simulate
+        run: python tb/run.py ${{ github.event.inputs.suites }}
+      - name: quick synth (cell / flip-flop counts)
+        if: always()
+        run: python flow/synth_quick.py
+      - name: tag summary
+        if: always()
+        run: |
+          python - <<'EOF'
+          import json, os, pathlib
+          p = pathlib.Path('results/summary.json')
+          s = json.loads(p.read_text()) if p.exists() else {'passed': False, 'suites': []}
+          s['run_id'] = os.environ.get('RUN_ID', '')
+          s['workflow_run'] = os.environ.get('GITHUB_RUN_ID', '')
+          p.parent.mkdir(exist_ok=True); p.write_text(json.dumps(s, indent=1))
+          EOF
+        env:
+          RUN_ID: ${{ github.event.inputs.run_id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sim-results
+          path: results/
+          retention-days: 30
