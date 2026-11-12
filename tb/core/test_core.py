@@ -108,8 +108,7 @@ async def test_programs(dut):
             fails.append(f"{t['name']}: {why}")
             tr = HERE.parents[1] / 'results' / 'core' / f"{t['name']}.trace"
             tr.parent.mkdir(parents=True, exist_ok=True)
-            tr.write_text('
-'.join(sysm.trace))
+            tr.write_text(chr(10).join(sysm.trace))
         dut._log.info(f"{'PASS' if ok else 'FAIL'} {t['name']} ({why}, {sysm.retired} instr)")
     out = HERE.parents[1] / 'results' / 'core'
     out.mkdir(parents=True, exist_ok=True)
