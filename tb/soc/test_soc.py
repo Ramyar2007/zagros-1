@@ -50,6 +50,12 @@ async def test_digits_demo(dut):
     dut._log.info('UART:\n' + text)
     if not post >> 31:
         core = dut.u_soc.u_core
+        pcs = []
+        for _ in range(400):
+            await RisingEdge(dut.clk)
+            if int(core.rvfi_valid.value):
+                pcs.append(f'{int(core.rvfi_pc.value):x}')
+        dut._log.error('retired pcs: ' + ' '.join(pcs[-120:]))
         dut._log.error(f"core state: ifetch addr={int(core.i_addr.value):#x} d_req={int(core.d_req.value)} "
                        f"mcause={int(core.mcause.value):#x} mepc={int(core.mepc.value):#x}")
     assert post >> 31, f'firmware did not finish in {MAX_CYCLES} cycles; UART so far:\n{text}'

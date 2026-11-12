@@ -24,3 +24,5 @@ for name, secs in (('isram', ['.text', '.rodata']), ('dsram', ['.data'])):
     (OUT / f'{name}.hex').write_text('\n'.join(f'{w:08x}' for w in words) + '\n')
     print(name, len(data), 'bytes')
 print(subprocess.run([CC.replace('gcc', 'size'), str(elf)], capture_output=True, text=True).stdout)
+dis = subprocess.run([CC.replace('gcc', 'objdump'), '-d', '-M', 'no-aliases', str(elf)], capture_output=True, text=True).stdout
+(OUT / 'fw.dis').write_text(dis)

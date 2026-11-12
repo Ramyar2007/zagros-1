@@ -36,6 +36,7 @@ jobs:
         run: |
           python tb/core/build_tests.py
           python fw/build.py
+          mkdir -p results/fw && cp fw/build/fw.dis fw/build/model.json results/fw/
       - name: tool versions
         run: |
           verilator --version
