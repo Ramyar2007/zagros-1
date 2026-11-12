@@ -348,6 +348,11 @@ module zg_core #(
                 e_sub <= f7[5]; e_sra <= f7[5]; e_csra <= d_ins[31:20];
             end else if (ex_adv_raw) begin
                 e_v <= 1'b0;                     // load-use bubble
+            end else begin
+                // EX is stalled: keep the operands it sees now, because the producers it forwards from
+                // (WB in particular) may retire before EX can complete
+                e_rs1v <= op1;
+                e_rs2v <= op2;
             end
 
             // ---------------- divider bookkeeping
